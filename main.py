@@ -1,32 +1,27 @@
 import pandas as pd
 import yfinance as yf  # calls yahoo finance api to get daily stock and index prices
+from sklearn.ensemble import RandomForestClassifier  # Works by training individual decision trees with randomized
+# parameters and then averaging those results from the decision trees. Thus, random forests are resistant to
+# overfitting, it harder for them to overfit. Also, they can pick up non-linear tendencies in data.
+# In stock price predictions, most relationships are not linear
+from sklearn.metrics import precision_score  # When we say market will go up, did it actually go up/down depending on
+# what the prediction is
 
-# Works by training individual decision trees with randomized parameters and then
-# averaging those results from the decision trees. Thus, random forests are resistant to
-# overfitting, it harder for them to overfit. Also, they can pick up non-linear tendencies in data
-# in stock price predictions, most relationships are not linear
-from sklearn.ensemble import RandomForestClassifier
-
-# when we say market will go up, did it actually go up/down depending on what the prediction is
-from sklearn.metrics import precision_score
 
 sp500 = yf.Ticker("^GSPC")  # Ticker class to help enable download of price history for a single symbol
-sp500 = sp500.history(period="max")  # query historical prices, query data from the beginning from when index was
-# created
-# we want open, high low, and close columns in order to predict of stock price will go up
+sp500 = sp500.history(period="max")  # Query historical prices, query data from the beginning from when index was
+# created we want open, high low, and close columns in order to predict of stock price will go up
 # or down tomorrow
 
 del sp500["Dividends"]
 del sp500["Stock Splits"]
 
-# some people like abs. price, the big problem is your model can be really accurate,
+# We do not want absolute price, the big problem is the model can be really accurate,
 # but you can still lose a lot of money, you don't need accurate price, you want accurate directionality
-# accurate on price but bad on directionality
 
-sp500["Tomorrow"] = sp500["Close"].shift(-1)  # shifts all prices back one day of Close column
-
-# return boolean  if tomorrow's price is greater than today's price
-sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)
+sp500["Tomorrow"] = sp500["Close"].shift(-1)  # Shifts all prices back one day of Close column
+sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)  # Return boolean if tomorrow's price is greater
+# than today's price
 
 sp500 = sp500.loc["1990-01-01":].copy()
 
@@ -73,7 +68,7 @@ def backtest(data, model, predictors, start=2500, step=250):
 
 # ADD ADDITIONAL PREDICTORS TO MODEL
 # Create various rolling averages
-horizons = [2, 5, 60, 250, 1000]  # get the mean close price in the last 2, 5, 60, 250, and 1000 days
+horizons = [2, 5, 60, 250, 1000]  # Get the mean close price in the last 2, 5, 60, 250, and 1000 days
 new_predictors = []
 
 for horizon in horizons:
@@ -81,7 +76,7 @@ for horizon in horizons:
     ratio_column = f"Close_Ratio{horizon}"
     sp500[ratio_column] = sp500["Close"] / rolling_averages["Close"]
 
-    # number of days in the past x days that the stock price actually went up
+    # Number of days in the past x days that the stock price actually went up
     trend_column = f"Trend_{horizon}"
 
     # This is going to, on any day, it will look at the past few days and
